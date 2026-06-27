@@ -2,8 +2,15 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Tier Lists</title>
+<!-- iPhone "Add to Home Screen" web-app behaviour -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tier Lists">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#111110" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f6f2" media="(prefers-color-scheme: light)">
 <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&f[]=cabinet-grotesk@700,800&display=swap" rel="stylesheet">
 <style>
 /* ─── Tokens ─── */
@@ -73,7 +80,7 @@ input{font:inherit;color:inherit}
 /* ─── Sidebar header ─── */
 .sidebar-head{
   display:flex;align-items:center;justify-content:space-between;
-  padding:var(--space-4) var(--space-3) var(--space-3);
+  padding:max(var(--space-4),env(safe-area-inset-top)) var(--space-3) var(--space-3);
   border-bottom:1px solid var(--color-border);gap:var(--space-2);
 }
 .app-logo{display:flex;align-items:center;gap:var(--space-2);flex:1;min-width:0}
@@ -124,7 +131,7 @@ input{font:inherit;color:inherit}
 /* ─── Main header ─── */
 .main-header{
   display:flex;align-items:center;gap:var(--space-3);
-  padding:var(--space-4) var(--space-6) var(--space-3);
+  padding:max(var(--space-4),env(safe-area-inset-top)) max(var(--space-6),env(safe-area-inset-right)) var(--space-3) max(var(--space-6),env(safe-area-inset-left));
   border-bottom:1px solid var(--color-border);
   flex-wrap:wrap;
 }
@@ -208,7 +215,8 @@ input{font:inherit;color:inherit}
   border-radius:var(--radius-md);
   padding:var(--space-2) var(--space-3);
   font-size:var(--text-sm);font-weight:500;
-  cursor:grab;user-select:none;
+  cursor:grab;user-select:none;-webkit-user-select:none;
+  touch-action:none;-webkit-touch-callout:none;
   display:flex;align-items:center;
   box-shadow:var(--shadow-sm);
   transition:transform var(--t),box-shadow var(--t),opacity var(--t);
@@ -373,7 +381,7 @@ input{font:inherit;color:inherit}
     </div>
     <div id="tierListEl" class="tier-list" style="display:none"></div>
     <div class="pool-section" id="poolSection" style="display:none">
-      <div class="pool-label">Unranked</div>
+      <div class="pool-label">To rank</div>
       <div class="pool tier-cards" id="pool" data-tier="pool"></div>
     </div>
   </div>
@@ -386,15 +394,20 @@ input{font:inherit;color:inherit}
     <h3>Settings</h3>
     <div class="settings-stack">
       <div class="settings-block">
-        <label class="settings-label" for="importTextarea">Import from pasted list</label>
-        <p class="settings-help">Paste items from your phone, one per line. Blank lines are ignored. New items will be added to the current list's Unranked section.</p>
+        <label class="settings-label" for="importTextarea">Import data</label>
+        <p class="settings-help">Paste a saved tier list (JSON) to restore it as a new list, or paste plain items one per line to add them to the current list's "To rank" section. You can also load a previously exported <code>.json</code> file below.</p>
         <textarea id="importTextarea" class="import-textarea" placeholder="Attack on Titan&#10;Bleach&#10;Dr. Stone&#10;Stranger Things"></textarea>
         <div class="import-stats" id="importStats">0 items detected</div>
+        <label class="btn btn-ghost" for="importFile" style="align-self:flex-start">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Load .json file
+        </label>
+        <input type="file" id="importFile" accept="application/json,.json" style="display:none">
       </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('settingsModal')">Close</button>
-      <button class="btn btn-primary" id="importListBtn">Import items</button>
+      <button class="btn btn-primary" id="importListBtn">Import</button>
     </div>
   </div>
 </div>
@@ -404,10 +417,11 @@ input{font:inherit;color:inherit}
 <div class="modal-backdrop" id="exportModal">
   <div class="modal" role="dialog" aria-modal="true">
     <h3>Export JSON</h3>
-    <p>Copy and save this to restore your list later.</p>
+    <p>Copy this, or download it as a file, to back up or restore your list later.</p>
     <pre class="modal-code" id="exportCode"></pre>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('exportModal')">Close</button>
+      <button class="btn btn-ghost" id="downloadJsonBtn">Download .json</button>
       <button class="btn btn-primary" id="copyJsonBtn">Copy JSON</button>
     </div>
   </div>
@@ -442,6 +456,7 @@ const TIER_DEFS = [
 ];
 
 const STORAGE_KEY = 'tierlist_app_v2';
+const ACTIVE_KEY = 'tierlist_active_v2';
 let appData = { lists: [] };
 let activeListId = null;
 let pendingDeleteId = null;
@@ -506,6 +521,7 @@ function renameList(id, newTitle) {
 
 function setActive(id) {
   activeListId = id;
+  try { localStorage.setItem(ACTIVE_KEY, id || ''); } catch (_) {}
   renderSidebar();
   renderMain();
 }
@@ -653,7 +669,6 @@ function renderCards() {
     tierListEl.appendChild(row);
     const container = row.querySelector('.tier-cards');
     populateCards(list.tiers[def.id] || [], container);
-    setupDrop(container);
   });
 
   const pool = document.getElementById('pool');
@@ -664,14 +679,12 @@ function renderCards() {
   } else {
     populateCards(poolCards, pool);
   }
-  setupDrop(pool);
 }
 
 function populateCards(cards, container) {
   cards.forEach(card => {
     const el = document.createElement('div');
     el.className = 'card';
-    el.draggable = true;
     el.dataset.id = card.id;
     el.dataset.tier = container.dataset.tier;
     el.innerHTML = `<span class="card-text">${esc(card.text)}</span>
@@ -680,59 +693,108 @@ function populateCards(cards, container) {
       e.stopPropagation();
       removeCard(card.id);
     });
-    setupDrag(el, card);
+    setupCardDrag(el, card);
     container.appendChild(el);
   });
 }
 
-/* ═══════ DRAG & DROP ═══════ */
-let dragCard = null;
-let dragSourceTier = null;
-let dragOverContainer = null;
-let dragGhost = null;
+/* ═══════ DRAG & DROP (Pointer Events — works with touch on iOS + mouse) ═══════
+   Native HTML5 drag-and-drop never fires for touch on iOS Safari, so we drive
+   the whole interaction off Pointer Events: a finger/mouse press on a card, a
+   floating clone that follows the pointer, and `elementFromPoint` to find the
+   drop target underneath. Combined with `touch-action:none` on .card this also
+   stops the page scrolling while a card is being dragged.                     */
 
-function setupDrag(el, card) {
-  el.addEventListener('dragstart', e => {
-    dragCard = card;
-    dragSourceTier = el.dataset.tier;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', card.id);
-    const ghost = el.cloneNode(true);
-    ghost.classList.add('ghost');
-    ghost.style.cssText = `position:fixed;top:-300px;left:-300px;width:${el.offsetWidth}px;pointer-events:none`;
-    document.body.appendChild(ghost);
-    dragGhost = ghost;
-    e.dataTransfer.setDragImage(ghost, 20, 20);
-    setTimeout(() => el.classList.add('dragging'), 0);
-  });
-  el.addEventListener('dragend', () => {
-    el.classList.remove('dragging');
-    if (dragGhost) { dragGhost.remove(); dragGhost = null; }
-    document.querySelectorAll('.drag-over').forEach(c => c.classList.remove('drag-over'));
+const DRAG_THRESHOLD = 6;   // px the pointer must travel before a drag starts
+const EDGE_ZONE = 64;       // px from top/bottom that triggers auto-scroll
+let drag = null;            // active drag session, or null
+
+function setupCardDrag(el, card) {
+  el.addEventListener('pointerdown', e => {
+    // Left mouse button / touch / pen only; ignore the delete button.
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (e.target.closest('.card-del')) return;
+    startDragSession(e, el, card);
   });
 }
 
-function setupDrop(container) {
-  container.addEventListener('dragover', e => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (dragOverContainer !== container) {
-      document.querySelectorAll('.drag-over').forEach(c => c.classList.remove('drag-over'));
-      container.classList.add('drag-over');
-      dragOverContainer = container;
-    }
-  });
-  container.addEventListener('dragleave', e => {
-    if (!container.contains(e.relatedTarget)) container.classList.remove('drag-over');
-  });
-  container.addEventListener('drop', e => {
-    e.preventDefault();
-    container.classList.remove('drag-over');
-    if (!dragCard) return;
-    moveCard(dragCard.id, dragSourceTier, container.dataset.tier);
-    dragCard = null;
-    dragSourceTier = null;
-  });
+function startDragSession(e, el, card) {
+  drag = {
+    el, card,
+    sourceTier: el.dataset.tier,
+    pointerId: e.pointerId,
+    startX: e.clientX, startY: e.clientY,
+    offsetX: 0, offsetY: 0,
+    clone: null,
+    overContainer: null,
+    started: false,
+  };
+  // Capture so we keep getting moves even if the finger leaves the card.
+  try { el.setPointerCapture(e.pointerId); } catch (_) {}
+  el.addEventListener('pointermove', onDragMove);
+  el.addEventListener('pointerup', onDragEnd);
+  el.addEventListener('pointercancel', onDragEnd);
+}
+
+function beginDrag(e) {
+  const el = drag.el;
+  const rect = el.getBoundingClientRect();
+  drag.offsetX = drag.startX - rect.left;
+  drag.offsetY = drag.startY - rect.top;
+  const clone = el.cloneNode(true);
+  clone.classList.add('ghost');
+  clone.style.cssText =
+    `position:fixed;left:0;top:0;width:${rect.width}px;margin:0;pointer-events:none;z-index:1000;`;
+  document.body.appendChild(clone);
+  drag.clone = clone;
+  el.classList.add('dragging');
+  drag.started = true;
+}
+
+function onDragMove(e) {
+  if (!drag) return;
+  if (!drag.started) {
+    if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < DRAG_THRESHOLD) return;
+    beginDrag(e);
+  }
+  e.preventDefault();
+  // Position the floating clone under the pointer.
+  drag.clone.style.transform =
+    `translate(${e.clientX - drag.offsetX}px, ${e.clientY - drag.offsetY}px) rotate(1.5deg)`;
+  // Find the drop container directly under the pointer.
+  drag.clone.style.visibility = 'hidden';
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  drag.clone.style.visibility = '';
+  const container = under ? under.closest('.tier-cards, .pool') : null;
+  if (container !== drag.overContainer) {
+    if (drag.overContainer) drag.overContainer.classList.remove('drag-over');
+    if (container) container.classList.add('drag-over');
+    drag.overContainer = container;
+  }
+  autoScroll(e.clientY);
+}
+
+function autoScroll(clientY) {
+  const scroller = document.getElementById('mainContent');
+  if (!scroller) return;
+  const rect = scroller.getBoundingClientRect();
+  if (clientY < rect.top + EDGE_ZONE) scroller.scrollTop -= 12;
+  else if (clientY > rect.bottom - EDGE_ZONE) scroller.scrollTop += 12;
+}
+
+function onDragEnd(e) {
+  if (!drag) return;
+  const { el, card, sourceTier, overContainer, started } = drag;
+  el.removeEventListener('pointermove', onDragMove);
+  el.removeEventListener('pointerup', onDragEnd);
+  el.removeEventListener('pointercancel', onDragEnd);
+  try { el.releasePointerCapture(drag.pointerId); } catch (_) {}
+  if (drag.clone) drag.clone.remove();
+  el.classList.remove('dragging');
+  if (overContainer) overContainer.classList.remove('drag-over');
+  const targetTier = overContainer ? overContainer.dataset.tier : null;
+  drag = null;
+  if (started && targetTier) moveCard(card.id, sourceTier, targetTier);
 }
 
 /* ═══════ EVENTS ═══════ */
@@ -770,11 +832,33 @@ document.getElementById('exportBtn').addEventListener('click', () => {
   openModal('exportModal');
 });
 document.getElementById('copyJsonBtn').addEventListener('click', () => {
-  navigator.clipboard.writeText(document.getElementById('exportCode').textContent).then(() => {
-    const btn = document.getElementById('copyJsonBtn');
-    btn.textContent = 'Copied!';
-    setTimeout(() => btn.textContent = 'Copy JSON', 1500);
-  });
+  const text = document.getElementById('exportCode').textContent;
+  const btn = document.getElementById('copyJsonBtn');
+  const done = () => { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy JSON', 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+});
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.cssText = 'position:fixed;top:-9999px';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch (_) {}
+  ta.remove();
+}
+document.getElementById('downloadJsonBtn').addEventListener('click', () => {
+  const list = getActiveList();
+  if (!list) return;
+  const text = JSON.stringify(list, null, 2);
+  const slug = (list.title || 'tier-list').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'tier-list';
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${slug}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 
 /* Delete confirm */
@@ -812,25 +896,30 @@ window.addEventListener('resize', checkMobile);
 checkMobile();
 
 /* ═══════ THEME ═══════ */
+const THEME_KEY = 'tierlist_theme';
 const themeBtn = document.getElementById('themeBtn');
-let theme = 'dark';
-document.documentElement.setAttribute('data-theme', theme);
-themeBtn.innerHTML = moonIcon();
-themeBtn.addEventListener('click', () => {
-  theme = theme === 'dark' ? 'light' : 'dark';
+let theme = localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark';
+function applyTheme() {
   document.documentElement.setAttribute('data-theme', theme);
   themeBtn.innerHTML = theme === 'dark' ? moonIcon() : sunIcon();
   themeBtn.setAttribute('aria-label', 'Switch to '+(theme==='dark'?'light':'dark')+' mode');
+}
+applyTheme();
+themeBtn.addEventListener('click', () => {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem(THEME_KEY, theme); } catch (_) {}
+  applyTheme();
 });
 function moonIcon(){return'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'}
 function sunIcon(){return'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'}
 
 
-/* Settings / pasted import */
+/* Settings / import (JSON restore OR plain-text lines) */
 const settingsBtn = document.getElementById('settingsBtn');
 const importTextarea = document.getElementById('importTextarea');
 const importStats = document.getElementById('importStats');
 const importListBtn = document.getElementById('importListBtn');
+const importFile = document.getElementById('importFile');
 
 settingsBtn.addEventListener('click', () => {
   importTextarea.value = '';
@@ -841,27 +930,86 @@ settingsBtn.addEventListener('click', () => {
 
 function parseImportedLines(text) {
   return text
-    .split(/?
-/)
+    .split(/\r?\n/)
     .map(line => line.trim())
     .filter(Boolean);
 }
 
+/* Coerce an exported list object into a clean list with fresh ids. */
+function normalizeImportedList(raw) {
+  if (!raw || typeof raw !== 'object' || !raw.tiers || typeof raw.tiers !== 'object') return null;
+  const tiers = emptyTiers();
+  [...TIER_DEFS.map(d => d.id), 'pool'].forEach(k => {
+    const arr = Array.isArray(raw.tiers[k]) ? raw.tiers[k] : [];
+    tiers[k] = arr.map(c => {
+      const text = (c && typeof c === 'object') ? c.text : c;
+      return (typeof text === 'string' && text.trim()) ? { id: genId(), text: text.trim() } : null;
+    }).filter(Boolean);
+  });
+  return {
+    id: genListId(),
+    title: (typeof raw.title === 'string' && raw.title.trim()) ? raw.title.trim() : 'Imported list',
+    tiers,
+  };
+}
+
+/* Returns an array of normalized lists if the text is a valid tier-list
+   export (single list, array of lists, or a full {lists:[…]} backup), else null. */
+function parseTierJSON(text) {
+  const trimmed = text.trim();
+  if (!trimmed || (trimmed[0] !== '{' && trimmed[0] !== '[')) return null;
+  let data;
+  try { data = JSON.parse(trimmed); } catch (_) { return null; }
+  let rawLists;
+  if (Array.isArray(data)) rawLists = data;
+  else if (data && Array.isArray(data.lists)) rawLists = data.lists;
+  else rawLists = [data];
+  const lists = rawLists.map(normalizeImportedList).filter(Boolean);
+  return lists.length ? lists : null;
+}
+
 function updateImportStats() {
-  const items = parseImportedLines(importTextarea.value);
-  importStats.textContent = `${items.length} item${items.length === 1 ? '' : 's'} detected`;
+  const lists = parseTierJSON(importTextarea.value);
+  if (lists) {
+    const total = lists.reduce((n, l) =>
+      n + Object.values(l.tiers).reduce((m, a) => m + a.length, 0), 0);
+    const ls = lists.length === 1 ? '' : 's';
+    importStats.textContent =
+      `Tier list JSON detected — ${lists.length} list${ls}, ${total} item${total === 1 ? '' : 's'} (added as new list${ls})`;
+  } else {
+    const items = parseImportedLines(importTextarea.value);
+    importStats.textContent = `${items.length} item${items.length === 1 ? '' : 's'} detected`;
+  }
 }
 
 importTextarea.addEventListener('input', updateImportStats);
 
+importFile.addEventListener('change', () => {
+  const file = importFile.files && importFile.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => { importTextarea.value = reader.result || ''; updateImportStats(); };
+  reader.readAsText(file);
+  importFile.value = '';  // allow re-selecting the same file later
+});
+
 importListBtn.addEventListener('click', () => {
-  const list = getActiveList();
-  if (!list) return;
-  const items = parseImportedLines(importTextarea.value);
-  if (!items.length) {
-    importTextarea.focus();
+  // 1) Full JSON restore → add as new list(s).
+  const lists = parseTierJSON(importTextarea.value);
+  if (lists) {
+    lists.forEach(l => appData.lists.push(l));
+    save();
+    setActive(lists[lists.length - 1].id);   // renders sidebar + main
+    closeModal('settingsModal');
+    importTextarea.value = '';
+    updateImportStats();
     return;
   }
+  // 2) Plain-text lines → add items to the current list's "To rank".
+  const list = getActiveList();
+  if (!list) { importTextarea.focus(); return; }
+  const items = parseImportedLines(importTextarea.value);
+  if (!items.length) { importTextarea.focus(); return; }
   items.forEach(text => list.tiers.pool.push({ id: genId(), text }));
   save();
   renderCards();
@@ -889,7 +1037,9 @@ if (appData.lists.length === 0) {
   save();
 }
 
-activeListId = appData.lists[0].id;
+// Restore the last-active list if it still exists, else fall back to the first.
+const savedActive = (() => { try { return localStorage.getItem(ACTIVE_KEY); } catch (_) { return null; } })();
+activeListId = appData.lists.some(l => l.id === savedActive) ? savedActive : appData.lists[0].id;
 renderSidebar();
 renderMain();
 </script>
