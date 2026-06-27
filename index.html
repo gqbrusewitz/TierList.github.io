@@ -75,6 +75,7 @@ input{font:inherit;color:inherit}
   flex-shrink:0;overflow:hidden;
   transition:width var(--t),min-width var(--t);
 }
+.sidebar.collapsed{width:0;min-width:0;border-right:none}
 .main{flex:1;min-width:0;display:flex;flex-direction:column}
 
 /* ─── Sidebar header ─── */
@@ -303,11 +304,10 @@ input{font:inherit;color:inherit}
   box-shadow:0 0 0 3px oklch(from var(--color-primary) l c h/.18)}
 .import-stats{font-size:var(--text-xs);color:var(--color-text-faint)}
 
-/* ─── Mobile collapse ─── */
+/* ─── Mobile: sidebar becomes an overlay (still toggled by .collapsed) ─── */
 @media(max-width:680px){
-  .sidebar{width:0;min-width:0;border-right:none}
-  .sidebar.open{width:var(--sidebar-w);min-width:var(--sidebar-w);
-    position:fixed;z-index:100;height:100dvh;top:0;left:0;border-right:1px solid var(--color-border)}
+  .sidebar{position:fixed;z-index:100;top:0;left:0;box-shadow:var(--shadow-lg)}
+  .sidebar.collapsed{box-shadow:none}
   .main-content{padding:var(--space-4) var(--space-3)}
   .add-bar{padding:var(--space-3)}
   .main-header{padding:var(--space-3)}
@@ -335,6 +335,9 @@ input{font:inherit;color:inherit}
     <button class="icon-btn" id="themeBtn" aria-label="Toggle theme">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
+    <button class="icon-btn" id="sidebarCollapseBtn" aria-label="Collapse sidebar" title="Collapse sidebar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+    </button>
   </div>
   <nav class="sidebar-lists" id="sidebarLists" aria-label="All lists"></nav>
   <div class="sidebar-footer">
@@ -349,7 +352,7 @@ input{font:inherit;color:inherit}
 <main class="main" id="mainArea">
   <!-- header -->
   <div class="main-header" id="mainHeader" style="display:none">
-    <button class="icon-btn" id="menuBtn" aria-label="Open sidebar" style="display:none">
+    <button class="icon-btn" id="menuBtn" aria-label="Toggle sidebar" aria-expanded="true">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
     <input class="list-title-input" id="listTitleInput" aria-label="List title" maxlength="48" placeholder="Untitled list">
@@ -879,21 +882,57 @@ document.querySelectorAll('.modal-backdrop').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
 
-/* Mobile menu toggle */
+/* ═══════ SIDEBAR COLLAPSE (works at all sizes) ═══════
+   Desktop: collapsing shrinks the sidebar to 0 and the main area expands; the
+   choice is remembered. Mobile: the sidebar is an overlay that starts collapsed
+   and closes when you pick a list or tap the main area. */
+const SIDEBAR_KEY = 'tierlist_sidebar_collapsed';
 const sidebar = document.getElementById('sidebar');
 const menuBtn = document.getElementById('menuBtn');
-menuBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+const mainArea = document.getElementById('mainArea');
+const isMobileWidth = () => window.innerWidth <= 680;
+let sidebarCollapsed = false;
+
+function applySidebar() {
+  sidebar.classList.toggle('collapsed', sidebarCollapsed);
+  menuBtn.setAttribute('aria-expanded', String(!sidebarCollapsed));
+}
+function setSidebar(collapsed, persist) {
+  sidebarCollapsed = collapsed;
+  if (persist && !isMobileWidth()) {
+    try { localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0'); } catch (_) {}
+  }
+  applySidebar();
+}
+function toggleSidebar() { setSidebar(!sidebarCollapsed, true); }
+function initSidebar() {
+  // Mobile starts collapsed (overlay); desktop restores the saved preference.
+  if (isMobileWidth()) setSidebar(true, false);
+  else setSidebar(localStorage.getItem(SIDEBAR_KEY) === '1', false);
+}
+
+menuBtn.addEventListener('click', e => { e.stopPropagation(); toggleSidebar(); });
+sidebarCollapseBtn.addEventListener('click', () => toggleSidebar());
+
+// Mobile overlay: tapping the main area or choosing a list dismisses the sidebar.
+mainArea.addEventListener('click', () => {
+  if (isMobileWidth() && !sidebarCollapsed) setSidebar(true, false);
+});
 sidebar.addEventListener('click', e => {
-  if (window.innerWidth <= 680 && e.target === sidebar) sidebar.classList.remove('open');
+  if (!isMobileWidth()) return;
+  const item = e.target.closest('.list-item');
+  if (item && !e.target.closest('.list-item-actions')) setSidebar(true, false);
 });
 
-/* Mobile: show menu button */
-function checkMobile() {
-  const isMobile = window.innerWidth <= 680;
-  menuBtn.style.display = isMobile ? '' : 'none';
-}
-window.addEventListener('resize', checkMobile);
-checkMobile();
+// Re-apply the right default only when crossing the mobile/desktop boundary
+// (ignores iOS URL-bar resize noise, which never crosses the breakpoint).
+let wasMobile = isMobileWidth();
+window.addEventListener('resize', () => {
+  const nowMobile = isMobileWidth();
+  if (nowMobile !== wasMobile) { wasMobile = nowMobile; initSidebar(); }
+});
+initSidebar();
 
 /* ═══════ THEME ═══════ */
 const THEME_KEY = 'tierlist_theme';
