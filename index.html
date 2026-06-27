@@ -38,12 +38,6 @@
   --font-display:'Cabinet Grotesk',system-ui,sans-serif;
   --font-body:'Satoshi',system-ui,sans-serif;
   --t:180ms cubic-bezier(0.16,1,0.3,1);
-  --s-bg:#4a1942;--s-border:#c84bc8;--s-text:#f5b8f5;
-  --a-bg:#1a3a1a;--a-border:#4caf50;--a-text:#a8e6ab;
-  --b-bg:#1a2e4a;--b-border:#4a9eff;--b-text:#a8d0ff;
-  --c-bg:#3a2e12;--c-border:#f5a623;--c-text:#fdd9a0;
-  --d-bg:#3a1f1f;--d-border:#e05555;--d-text:#f5a5a5;
-  --f-bg:#1e1e1e;--f-border:#555;--f-text:#aaa;
 }
 [data-theme="dark"]{
   --color-bg:#111110;--color-surface:#1c1b19;--color-surface-2:#201f1d;
@@ -189,19 +183,11 @@ input{font:inherit;color:inherit}
 .tier-label-letter{font-family:var(--font-display);font-size:var(--text-xl);
   font-weight:800;letter-spacing:-.02em;line-height:1;user-select:none}
 .tier-label-name{font-size:10px;font-weight:600;opacity:.7;text-align:center;
-  letter-spacing:.04em;text-transform:uppercase}
-.tier-row[data-tier="S"] .tier-label{background:var(--s-bg);border-right:2px solid var(--s-border)}
-.tier-row[data-tier="S"] .tier-label-letter{color:var(--s-text);text-shadow:0 0 18px var(--s-border)}
-.tier-row[data-tier="A"] .tier-label{background:var(--a-bg);border-right:2px solid var(--a-border)}
-.tier-row[data-tier="A"] .tier-label-letter{color:var(--a-text);text-shadow:0 0 18px var(--a-border)}
-.tier-row[data-tier="B"] .tier-label{background:var(--b-bg);border-right:2px solid var(--b-border)}
-.tier-row[data-tier="B"] .tier-label-letter{color:var(--b-text);text-shadow:0 0 18px var(--b-border)}
-.tier-row[data-tier="C"] .tier-label{background:var(--c-bg);border-right:2px solid var(--c-border)}
-.tier-row[data-tier="C"] .tier-label-letter{color:var(--c-text);text-shadow:0 0 18px var(--c-border)}
-.tier-row[data-tier="D"] .tier-label{background:var(--d-bg);border-right:2px solid var(--d-border)}
-.tier-row[data-tier="D"] .tier-label-letter{color:var(--d-text);text-shadow:0 0 18px var(--d-border)}
-.tier-row[data-tier="F"] .tier-label{background:var(--f-bg);border-right:2px solid var(--f-border)}
-.tier-row[data-tier="F"] .tier-label-letter{color:var(--f-text)}
+  letter-spacing:.04em;text-transform:uppercase;
+  overflow:hidden;text-overflow:ellipsis;max-width:100%}
+/* Colors are set per row from the tier's palette entry via inline CSS vars. */
+.tier-label{background:var(--tl-bg);border-right:2px solid var(--tl-border)}
+.tier-label-letter{color:var(--tl-text);text-shadow:0 0 18px var(--tl-border)}
 .tier-cards{flex:1;display:flex;flex-wrap:wrap;gap:var(--space-2);
   padding:var(--space-3);align-content:flex-start;min-height:88px;position:relative}
 .tier-cards.drag-over{
@@ -304,6 +290,32 @@ input{font:inherit;color:inherit}
   box-shadow:0 0 0 3px oklch(from var(--color-primary) l c h/.18)}
 .import-stats{font-size:var(--text-xs);color:var(--color-text-faint)}
 
+/* ─── Tier editor ─── */
+.tier-editor{display:flex;flex-direction:column;gap:var(--space-2);
+  max-height:46vh;overflow-y:auto;padding-right:2px}
+.tier-edit-row{display:flex;align-items:center;gap:var(--space-2);
+  padding:var(--space-2);border:1px solid var(--color-border);
+  border-radius:var(--radius-md);background:var(--color-bg)}
+.tier-edit-swatch{width:18px;height:18px;flex-shrink:0;border-radius:var(--radius-sm);
+  border:1px solid oklch(from var(--color-text) l c h/.2)}
+.tier-edit-reorder{display:flex;flex-direction:column;gap:1px;flex-shrink:0}
+.tier-edit-reorder button{width:22px;height:16px;display:flex;align-items:center;
+  justify-content:center;border-radius:var(--radius-sm);color:var(--color-text-muted)}
+.tier-edit-reorder button:hover{color:var(--color-text);background:var(--color-surface-offset)}
+.tier-edit-reorder button:disabled{opacity:.3;cursor:default;background:none}
+.tier-edit-label{width:56px;min-width:56px;flex-shrink:0;text-align:center;font-weight:700;
+  padding:var(--space-2);background:var(--color-surface-offset);
+  border:1px solid var(--color-border);border-radius:var(--radius-sm)}
+.tier-edit-name{flex:1;min-width:0;padding:var(--space-2);
+  background:var(--color-surface-offset);border:1px solid var(--color-border);
+  border-radius:var(--radius-sm)}
+.tier-edit-label:focus,.tier-edit-name:focus{outline:none;border-color:var(--color-primary);
+  box-shadow:0 0 0 2px oklch(from var(--color-primary) l c h/.2)}
+.tier-edit-del{width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;border-radius:var(--radius-sm);color:var(--color-text-faint);font-size:13px}
+.tier-edit-del:hover:not(:disabled){color:#fff;background:#e05555}
+.tier-edit-del:disabled{opacity:.3;cursor:default}
+
 /* ─── Mobile: sidebar becomes an overlay (still toggled by .collapsed) ─── */
 @media(max-width:680px){
   .sidebar{position:fixed;z-index:100;top:0;left:0;box-shadow:var(--shadow-lg)}
@@ -311,9 +323,9 @@ input{font:inherit;color:inherit}
   .main-content{padding:var(--space-4) var(--space-3)}
   .add-bar{padding:var(--space-3)}
   .main-header{padding:var(--space-3)}
-  .tier-label{width:52px;min-width:52px}
+  .tier-label{width:60px;min-width:60px}
   .tier-label-letter{font-size:var(--text-lg)}
-  .tier-label-name{display:none}
+  .tier-label-name{font-size:9px}
 }
 </style>
 </head>
@@ -397,6 +409,14 @@ input{font:inherit;color:inherit}
     <h3>Settings</h3>
     <div class="settings-stack">
       <div class="settings-block">
+        <span class="settings-label">Tiers</span>
+        <p class="settings-help">Customize this list's tiers — add or remove tiers, rename them, give them names, and change their order.</p>
+        <button class="btn btn-ghost" id="editTiersBtn" style="align-self:flex-start">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="var(--color-surface)"/><circle cx="15" cy="12" r="2" fill="var(--color-surface)"/><circle cx="9" cy="18" r="2" fill="var(--color-surface)"/></svg>
+          Edit tiers
+        </button>
+      </div>
+      <div class="settings-block">
         <label class="settings-label" for="importTextarea">Import data</label>
         <p class="settings-help">Paste a saved tier list (JSON) to restore it as a new list, or paste plain items one per line to add them to the current list's "To rank" section. You can also load a previously exported <code>.json</code> file below.</p>
         <textarea id="importTextarea" class="import-textarea" placeholder="Attack on Titan&#10;Bleach&#10;Dr. Stone&#10;Stranger Things"></textarea>
@@ -411,6 +431,23 @@ input{font:inherit;color:inherit}
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('settingsModal')">Close</button>
       <button class="btn btn-primary" id="importListBtn">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit tiers modal -->
+<div class="modal-backdrop" id="tiersModal">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3>Edit tiers</h3>
+    <p>Reorder, rename, add or remove tiers for this list. Removing a tier moves its items back to “To rank”.</p>
+    <div class="tier-editor" id="tierEditorRows"></div>
+    <button class="btn btn-ghost" id="addTierBtn" style="align-self:flex-start;margin-top:var(--space-3)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add tier
+    </button>
+    <div class="modal-actions" style="margin-top:var(--space-5)">
+      <button class="btn btn-ghost" onclick="closeModal('tiersModal')">Cancel</button>
+      <button class="btn btn-primary" id="saveTiersBtn">Save tiers</button>
     </div>
   </div>
 </div>
@@ -449,14 +486,38 @@ input{font:inherit;color:inherit}
    activeListId = string | null
 ═══════════════════════════════════════════ */
 
-const TIER_DEFS = [
-  {id:'S',letter:'S',name:'Top Tier'},
-  {id:'A',letter:'A',name:'Great'},
-  {id:'B',letter:'B',name:'Good'},
-  {id:'C',letter:'C',name:'Average'},
-  {id:'D',letter:'D',name:'Below Avg'},
-  {id:'F',letter:'F',name:'Trash'},
+/* Color presets a tier can use. Keys are stored on each tier def; the first six
+   match the original S–F look, the rest give extra tiers distinct colors. */
+const TIER_PALETTE = {
+  s:{bg:'#4a1942',border:'#c84bc8',text:'#f5b8f5'},
+  a:{bg:'#1a3a1a',border:'#4caf50',text:'#a8e6ab'},
+  b:{bg:'#1a2e4a',border:'#4a9eff',text:'#a8d0ff'},
+  c:{bg:'#3a2e12',border:'#f5a623',text:'#fdd9a0'},
+  d:{bg:'#3a1f1f',border:'#e05555',text:'#f5a5a5'},
+  f:{bg:'#1e1e1e',border:'#555555',text:'#aaaaaa'},
+  teal:{bg:'#123a3a',border:'#2bb6b0',text:'#a5e9e5'},
+  pink:{bg:'#3a1430',border:'#e0559e',text:'#f5a5d6'},
+  indigo:{bg:'#20204a',border:'#6c63ff',text:'#bcb8ff'},
+  slate:{bg:'#24282e',border:'#7a8699',text:'#c2cad6'},
+  lime:{bg:'#26330f',border:'#9ccc3a',text:'#d7eaa0'},
+};
+const PALETTE_KEYS = Object.keys(TIER_PALETTE);
+const paletteFor = key => TIER_PALETTE[key] || TIER_PALETTE.slate;
+/* Pick the first palette color not already used by this list, else cycle. */
+function nextPaletteColor(usedKeys) {
+  const free = PALETTE_KEYS.find(k => !usedKeys.includes(k));
+  return free || PALETTE_KEYS[usedKeys.length % PALETTE_KEYS.length];
+}
+
+const DEFAULT_TIER_DEFS = [
+  {id:'S',label:'S',name:'Top Tier',color:'s'},
+  {id:'A',label:'A',name:'Great',color:'a'},
+  {id:'B',label:'B',name:'Good',color:'b'},
+  {id:'C',label:'C',name:'Average',color:'c'},
+  {id:'D',label:'D',name:'Below Avg',color:'d'},
+  {id:'F',label:'F',name:'Trash',color:'f'},
 ];
+const defaultTierDefs = () => DEFAULT_TIER_DEFS.map(d => ({...d}));
 
 const STORAGE_KEY = 'tierlist_app_v2';
 const ACTIVE_KEY = 'tierlist_active_v2';
@@ -466,6 +527,7 @@ let pendingDeleteId = null;
 let idCounter = Date.now();
 const genId = () => 'i' + (idCounter++);
 const genListId = () => 'l' + Date.now() + Math.random().toString(36).slice(2,6);
+const genTierId = () => 't' + (idCounter++);
 
 /* ─── Persistence ─── */
 function save() {
@@ -476,13 +538,26 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) appData = JSON.parse(raw);
   } catch(e) {}
+  (appData.lists || []).forEach(migrateList);
 }
 
-function emptyTiers() {
+/* Build empty tier buckets ({id:[]…} + pool) for a set of tier defs. */
+function emptyTiers(defs) {
   const t = {};
-  TIER_DEFS.forEach(d => t[d.id] = []);
+  (defs || DEFAULT_TIER_DEFS).forEach(d => t[d.id] = []);
   t.pool = [];
   return t;
+}
+
+/* Bring older saved lists (no tierDefs) up to the current shape, and make sure
+   a bucket array exists for every tier id + pool. */
+function migrateList(list) {
+  if (!list.tierDefs || !Array.isArray(list.tierDefs) || !list.tierDefs.length) {
+    list.tierDefs = defaultTierDefs();
+  }
+  if (!list.tiers || typeof list.tiers !== 'object') list.tiers = {};
+  list.tierDefs.forEach(d => { if (!Array.isArray(list.tiers[d.id])) list.tiers[d.id] = []; });
+  if (!Array.isArray(list.tiers.pool)) list.tiers.pool = [];
 }
 
 function getActiveList() {
@@ -491,10 +566,12 @@ function getActiveList() {
 
 /* ─── List CRUD ─── */
 function createList(title) {
+  const defs = defaultTierDefs();
   const list = {
     id: genListId(),
     title: title || 'New List',
-    tiers: emptyTiers(),
+    tierDefs: defs,
+    tiers: emptyTiers(defs),
   };
   appData.lists.push(list);
   save();
@@ -659,14 +736,16 @@ function renderCards() {
 
   const tierListEl = document.getElementById('tierListEl');
   tierListEl.innerHTML = '';
-  TIER_DEFS.forEach(def => {
+  list.tierDefs.forEach(def => {
     const row = document.createElement('div');
     row.className = 'tier-row';
     row.dataset.tier = def.id;
+    const c = paletteFor(def.color);
+    row.style.cssText = `--tl-bg:${c.bg};--tl-border:${c.border};--tl-text:${c.text}`;
     row.innerHTML = `
       <div class="tier-label">
-        <div class="tier-label-letter">${def.letter}</div>
-        <div class="tier-label-name">${def.name}</div>
+        <div class="tier-label-letter">${esc(def.label || '')}</div>
+        <div class="tier-label-name">${esc(def.name || '')}</div>
       </div>
       <div class="tier-cards" id="tier-${def.id}" data-tier="${def.id}"></div>`;
     tierListEl.appendChild(row);
@@ -974,11 +1053,35 @@ function parseImportedLines(text) {
     .filter(Boolean);
 }
 
+/* Normalize a raw tierDefs array from an import; auto-assign colors as needed.
+   Falls back to the default S–F defs for older exports without tierDefs. */
+function normalizeImportedDefs(raw) {
+  if (!Array.isArray(raw) || !raw.length) return defaultTierDefs();
+  const used = [];
+  const seen = new Set();
+  const defs = [];
+  raw.forEach(d => {
+    if (!d || typeof d !== 'object') return;
+    let id = typeof d.id === 'string' && d.id && d.id !== 'pool' && !seen.has(d.id) ? d.id : genTierId();
+    seen.add(id);
+    const color = (typeof d.color === 'string' && TIER_PALETTE[d.color]) ? d.color : nextPaletteColor(used);
+    used.push(color);
+    defs.push({
+      id,
+      label: (typeof d.label === 'string' ? d.label : (typeof d.letter === 'string' ? d.letter : '')).trim() || '?',
+      name: (typeof d.name === 'string' ? d.name : '').trim(),
+      color,
+    });
+  });
+  return defs.length ? defs : defaultTierDefs();
+}
+
 /* Coerce an exported list object into a clean list with fresh ids. */
 function normalizeImportedList(raw) {
   if (!raw || typeof raw !== 'object' || !raw.tiers || typeof raw.tiers !== 'object') return null;
-  const tiers = emptyTiers();
-  [...TIER_DEFS.map(d => d.id), 'pool'].forEach(k => {
+  const defs = normalizeImportedDefs(raw.tierDefs);
+  const tiers = emptyTiers(defs);
+  [...defs.map(d => d.id), 'pool'].forEach(k => {
     const arr = Array.isArray(raw.tiers[k]) ? raw.tiers[k] : [];
     tiers[k] = arr.map(c => {
       const text = (c && typeof c === 'object') ? c.text : c;
@@ -988,6 +1091,7 @@ function normalizeImportedList(raw) {
   return {
     id: genListId(),
     title: (typeof raw.title === 'string' && raw.title.trim()) ? raw.title.trim() : 'Imported list',
+    tierDefs: defs,
     tiers,
   };
 }
@@ -1057,6 +1161,98 @@ importListBtn.addEventListener('click', () => {
   updateImportStats();
 });
 
+/* ═══════ TIER EDITOR ═══════ */
+const editTiersBtn = document.getElementById('editTiersBtn');
+const tierEditorRows = document.getElementById('tierEditorRows');
+const addTierBtn = document.getElementById('addTierBtn');
+const saveTiersBtn = document.getElementById('saveTiersBtn');
+let editorDefs = [];   // working copy while the editor is open
+
+editTiersBtn.addEventListener('click', () => {
+  const list = getActiveList();
+  if (!list) return;
+  editorDefs = list.tierDefs.map(d => ({ ...d }));  // edit a copy, commit on Save
+  renderTierEditor();
+  closeModal('settingsModal');   // show one modal at a time
+  openModal('tiersModal');
+});
+
+function renderTierEditor() {
+  tierEditorRows.innerHTML = '';
+  editorDefs.forEach((def, i) => {
+    const c = paletteFor(def.color);
+    const row = document.createElement('div');
+    row.className = 'tier-edit-row';
+    row.innerHTML = `
+      <div class="tier-edit-reorder">
+        <button data-act="up" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 15 12 9 18 15"/></svg>
+        </button>
+        <button data-act="down" aria-label="Move down" ${i === editorDefs.length - 1 ? 'disabled' : ''}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+      <span class="tier-edit-swatch" style="background:${c.bg};border-color:${c.border}"></span>
+      <input class="tier-edit-label" data-field="label" value="${esc(def.label || '')}" maxlength="6" aria-label="Tier label" placeholder="?">
+      <input class="tier-edit-name" data-field="name" value="${esc(def.name || '')}" maxlength="18" aria-label="Tier name" placeholder="Optional name">
+      <button class="tier-edit-del" data-act="del" aria-label="Remove tier" ${editorDefs.length <= 1 ? 'disabled' : ''}>✕</button>`;
+    row.querySelector('[data-field="label"]').addEventListener('input', e => { editorDefs[i].label = e.target.value; });
+    row.querySelector('[data-field="name"]').addEventListener('input', e => { editorDefs[i].name = e.target.value; });
+    row.querySelector('[data-act="up"]').addEventListener('click', () => moveEditorDef(i, -1));
+    row.querySelector('[data-act="down"]').addEventListener('click', () => moveEditorDef(i, 1));
+    row.querySelector('[data-act="del"]').addEventListener('click', () => { editorDefs.splice(i, 1); renderTierEditor(); });
+    tierEditorRows.appendChild(row);
+  });
+}
+
+function moveEditorDef(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= editorDefs.length) return;
+  [editorDefs[i], editorDefs[j]] = [editorDefs[j], editorDefs[i]];
+  renderTierEditor();
+}
+
+addTierBtn.addEventListener('click', () => {
+  const used = editorDefs.map(d => d.color);
+  editorDefs.push({ id: genTierId(), label: 'New', name: '', color: nextPaletteColor(used) });
+  renderTierEditor();
+  // focus the new row's label
+  const inputs = tierEditorRows.querySelectorAll('.tier-edit-label');
+  const last = inputs[inputs.length - 1];
+  if (last) { last.focus(); last.select(); }
+  tierEditorRows.scrollTop = tierEditorRows.scrollHeight;
+});
+
+saveTiersBtn.addEventListener('click', () => {
+  const list = getActiveList();
+  if (!list) return;
+  // Tidy labels; drop fully-blank tiers; guarantee at least one tier.
+  let defs = editorDefs
+    .map(d => ({ ...d, label: (d.label || '').trim(), name: (d.name || '').trim() }))
+    .filter(d => d.label || d.name);
+  if (!defs.length) defs = defaultTierDefs();
+  defs.forEach((d, i) => { if (!d.label) d.label = String(i + 1); });
+  applyTierDefs(list, defs);
+  closeModal('tiersModal');
+});
+
+/* Reconcile a list's tiers with an edited set of defs: removed tiers' cards go
+   back to the pool, new tiers get empty buckets, retained tiers keep their cards. */
+function applyTierDefs(list, newDefs) {
+  const newIds = newDefs.map(d => d.id);
+  Object.keys(list.tiers).forEach(id => {
+    if (id === 'pool') return;
+    if (!newIds.includes(id)) {
+      list.tiers.pool.push(...(list.tiers[id] || []));
+      delete list.tiers[id];
+    }
+  });
+  newDefs.forEach(d => { if (!Array.isArray(list.tiers[d.id])) list.tiers[d.id] = []; });
+  list.tierDefs = newDefs;
+  save();
+  renderMain();
+}
+
 /* ═══════ INIT ═══════ */
 load();
 
@@ -1065,6 +1261,7 @@ if (appData.lists.length === 0) {
   const id = genListId();
   appData.lists.push({
     id, title: 'Anime Rankings',
+    tierDefs: defaultTierDefs(),
     tiers: {
       S: [{id:genId(),text:'Attack on Titan'},{id:genId(),text:'Breaking Bad'}],
       A: [{id:genId(),text:'Bleach'},{id:genId(),text:'Arcane'}],
